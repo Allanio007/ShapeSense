@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<!--
+  ╔══════════════════════════════════════════════════════════╗
+  ║              S H A P E S E N S E  ·  WebAR              ║
+  ║──────────────────────────────────────────────────────────║
+  ║  Autor  : Alanio Ferreira de Lima                        ║
+  ║  Curso  : Web 3.0 – Realidade Aumentada                  ║
+  ║  Unidade: 5 – Projeto Final                              ║
+  ║  Setor  : Saúde                                          ║
+  ║                                                          ║
+  ║  Tecnologias:                                            ║
+  ║    · Canvas API (captura + overlay RA + simulação)       ║
+  ║    · MediaDevices.getUserMedia (câmera traseira)         ║
+  ║    · window.print() (relatório PDF local)                ║
+  ║    · Sem frameworks · Sem servidor · Sem nuvem           ║
+  ╚══════════════════════════════════════════════════════════╝
+-->
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="author" content="Alanio Ferreira de Lima" />
+  <title>ShapeSense · Simulação</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ═══ TOKENS ═══════════════════════════════════════════════ */
+    :root {
+      --c-bg:       #FAFAFA;
+      --c-surface:  #FFFFFF;
+      --c-rose:     #C0546A;
+      --c-rose-lt:  #E8A5B3;
+      --c-rose-bg:  #FDF0F3;
+      --c-ink:      #1E1A1C;
+      --c-muted:    #7A6D72;
+      --c-safe:     #2E7D6B;
+      --c-safe-bg:  #EAF5F2;
+      --c-warn:     #B5461A;
+      --c-warn-bg:  #FEF0EA;
+      --c-border:   #EDE5E8;
+      --c-dark:     #140F11;
+      --r-lg: 18px; --r-md: 12px; --r-sm: 8px;
+      --shadow: 0 2px 16px rgba(30,26,28,.08);
+      --tr: .2s cubic-bezier(.4,0,.2,1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--c-dark);
+      color: var(--c-ink);
+      min-height: 100dvh;
+      overflow: hidden;
+    }
+
+    /* ═══ SISTEMA DE ESTÁGIOS ═══════════════════════════════════
+       Cada <section class="stage"> ocupa a tela inteira.
+       Apenas o estágio com .active fica visível.
+    ══════════════════════════════════════════════════════════════ */
+    .stage {
+      display: none;
+      width: 100vw;
+      height: 100dvh;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .stage.active { display: flex; }
+
+    /* ─────────────────────────────────────────────
+       ESTÁGIO 1 · CÂMERA
+    ───────────────────────────────────────────── */
+    #s-camera {
+      position: relative;
+      background: #000;
+      align-items: stretch;
+      justify-content: stretch;
+    }
+
+    #video {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+
+    /* Topo: status */
+    .cam-top {
+      position: relative;
+      z-index: 10;
+      padding: 1rem 1.2rem .6rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(to bottom, rgba(0,0,0,.7) 0%, transparent 100%);
+    }
+    .cam-brand {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      color: #fff;
+    }
+    .cam-brand em { font-style: italic; color: var(--c-rose-lt); }
+
+    .cam-pill {
+      display: flex;
+      align-items: center;
+      gap: .45rem;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.2);
+      padding: .3rem .75rem;
+      border-radius: 20px;
+      font-size: .75rem;
+      color: #fff;
+    }
+    .blink { animation: blink 1.4s ease-in-out infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+    .led {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--c-rose-lt);
+    }
+
+    /* Guia de enquadramento central */
+    .frame-guide {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -53%);
+      width: 74vw; max-width: 300px;
+      height: 56vw; max-height: 230px;
+      pointer-events: none;
+      z-index: 5;
+    }
+    /* 4 cantos em L */
+    .frame-guide::before,
+    .frame-guide::after,
+    .fg-br, .fg-bl {
+      content: '';
+      position: absolute;
+      width: 22px; height: 22px;
+      border-color: rgba(232,165,179,.8);
+      border-style: solid;
+    }
+    .frame-guide::before { top: 0; left: 0;   border-width: 2.5px 0 0 2.5px; border-radius: 3px 0 0 0; }
+    .frame-guide::after  { top: 0; right: 0;  border-width: 2.5px 2.5px 0 0; border-radius: 0 3px 0 0; }
+    .fg-br { bottom: 0; right: 0; border-width: 0 2.5px 2.5px 0; border-radius: 0 0 3px 0; }
+    .fg-bl { bottom: 0; left: 0;  border-width: 0 0 2.5px 2.5px; border-radius: 0 0 0 3px; }
+
+    /* Dica central */
+    .cam-hint {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, calc(-53% + 130px));
+      z-index: 6;
+      background: rgba(0,0,0,.6);
+      color: rgba(255,255,255,.85);
+      padding: .4rem 1rem;
+      border-radius: 20px;
+      font-size: .75rem;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    /* Barra de controles inferior */
+    .cam-bottom {
+      position: relative;
+      z-index: 10;
+      margin-top: auto;
+      padding: 1.2rem 1.6rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(to top, rgba(0,0,0,.75) 0%, transparent 100%);
+    }
+
+    .btn-ghost-cam {
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.2);
+      color: #fff;
+      border-radius: var(--r-sm);
+      padding: .55rem 1rem;
+      font-family: 'Inter', sans-serif;
+      font-size: .8rem;
+      cursor: pointer;
+      transition: background var(--tr);
+    }
+    .btn-ghost-cam:hover { background: rgba(255,255,255,.2); }
+
+    .btn-shutter {
+      width: 70px; height: 70px;
+      border-radius: 50%;
+      border: 3px solid #fff;
+      background: var(--c-rose);
+      cursor: pointer;
+      box-shadow: 0 0 0 6px rgba(192,84,106,.35);
+      transition: transform var(--tr), box-shadow var(--tr);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .btn-shutter svg {
+      width: 28px; height: 28px;
+      fill: #fff;
+    }
+    .btn-shutter:active { transform: scale(.92); box-shadow: 0 0 0 10px rgba(192,84,106,.2); }
+
+    /* ─────────────────────────────────────────────
+       ESTÁGIOS 2 e 3 · CABEÇALHO COMPARTILHADO
+    ───────────────────────────────────────────── */
+    .app-header {
+      background: var(--c-ink);
+      color: #fff;
+      padding: .9rem 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .app-header .brand-sm {
+      font-family: 'Playfair Display', serif;
+      font-size: 1rem;
+    }
+    .app-header .brand-sm em { font-style: italic; color: var(--c-rose-lt); }
+    .app-header .phase-tag {
+      font-size: .72rem;
+      font-weight: 500;
+      background: rgba(255,255,255,.1);
+      border-radius: 20px;
+      padding: .25rem .7rem;
+      color: rgba(255,255,255,.7);
+    }
+    .btn-back-header {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,.5);
+      font-size: .78rem;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      padding: .25rem .5rem;
+    }
+    .btn-back-header:hover { color: #fff; }
+
+    /* ─────────────────────────────────────────────
+       ESTÁGIO 2 · MEDIÇÃO
+    ───────────────────────────────────────────── */
+    #s-measure {
+      background: var(--c-bg);
+    }
+
+    /* Área da foto + canvas de overlay */
+    .photo-zone {
+      position: relative;
+      background: #000;
+      flex-shrink: 0;
+      max-height: 42vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    #photo-canvas {
+      display: block;
+      max-width: 100%;
+      max-height: 42vh;
+      object-fit: contain;
+    }
+    #overlay-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+    }
+
+    /* Painel de métricas (scroll) */
+    .metrics-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.1rem 1.2rem;
+    }
+
+    .section-label {
+      font-size: .68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--c-muted);
+      margin-bottom: .8rem;
+    }
+
+    /* Grade 2×2 de métricas */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .65rem;
+      margin-bottom: 1rem;
+    }
+    .metric-card {
+      background: var(--c-surface);
+      border: 1px solid var(--c-border);
+      border-radius: var(--r-md);
+      padding: .85rem 1rem;
+      box-shadow: var(--shadow);
+    }
+    .mc-label {
+      font-size: .68rem;
+      color: var(--c-muted);
+      margin-bottom: .35rem;
+      line-height: 1.4;
+    }
+    .mc-value {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.45rem;
+      color: var(--c-ink);
+      line-height: 1;
+    }
+    .mc-unit {
+      font-family: 'Inter', sans-serif;
+      font-size: .72rem;
+      color: var(--c-muted);
+      margin-left: .2em;
+    }
+
+    /* Box de sugestão */
+    .suggest-box {
+      background: var(--c-surface);
+      border: 1px solid var(--c-border);
+      border-radius: var(--r-md);
+      padding: 1rem 1.1rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 1.1rem;
+    }
+    .suggest-box.is-safe  { border-left: 4px solid var(--c-safe); }
+    .suggest-box.is-warn  { border-left: 4px solid var(--c-rose); }
+    .sb-label { font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--c-muted); margin-bottom: .5rem; }
+    .sb-volume {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.7rem;
+      color: var(--c-safe);
+    }
+    .suggest-box.is-warn .sb-volume { color: var(--c-warn); }
+    .sb-detail { font-size: .78rem; color: var(--c-muted); margin-top: .3rem; line-height: 1.5; }
+
+    /* Botões do estágio 2 */
+    .btn-primary {
+      display: block; width: 100%;
+      padding: .95rem; background: var(--c-rose);
+      color: #fff; border: none; border-radius: var(--r-md);
+      font-family: 'Inter', sans-serif; font-size: .95rem; font-weight: 600;
+      cursor: pointer; text-align: center;
+      box-shadow: 0 4px 16px rgba(192,84,106,.28);
+      transition: background var(--tr), transform var(--tr);
+    }
+    .btn-primary:hover { background: #a84560; transform: translateY(-1px); }
+
+    .btn-secondary {
+      display: block; width: 100%;
+      padding: .8rem; background: transparent;
+      color: var(--c-muted); border: 1.5px solid var(--c-border);
+      border-radius: var(--r-md);
+      font-family: 'Inter', sans-serif; font-size: .88rem;
+      cursor: pointer; text-align: center; margin-top: .6rem;
+      transition: border-color var(--tr), color var(--tr);
+    }
+    .btn-secondary:hover { border-color: var(--c-rose); color: var(--c-rose); }
+
+    /* ─────────────────────────────────────────────
+       ESTÁGIO 3 · SIMULAÇÃO
+    ───────────────────────────────────────────── */
+    #s-sim {
+      background: var(--c-bg);
+    }
+
+    /* Canvas da simulação */
+    .sim-zone {
+      position: relative;
+      background: var(--c-dark);
+      flex-shrink: 0;
+      max-height: 42vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    #sim-canvas {
+      display: block;
+      max-width: 100%;
+      max-height: 42vh;
+      object-fit: contain;
+    }
+
+    /* Badge de segurança sobre o canvas */
+    .safety-tag {
+      position: absolute;
+      bottom: 10px; left: 50%;
+      transform: translateX(-50%);
+      padding: .32rem 1rem;
+      border-radius: 20px;
+      font-size: .75rem;
+      font-weight: 600;
+      white-space: nowrap;
+      letter-spacing: .02em;
+      transition: background var(--tr), color var(--tr);
+    }
+    .safety-tag.safe { background: var(--c-safe);  color: #fff; }
+    .safety-tag.warn { background: var(--c-rose);  color: #fff; }
+
+    /* Painel de controles */
+    .sim-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem 1.2rem 1.4rem;
+    }
+
+    /* Slider row */
+    .ctrl-row { margin-bottom: 1rem; }
+    .ctrl-row-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: .4rem;
+    }
+    .ctrl-name { font-size: .82rem; font-weight: 500; color: var(--c-ink); }
+    .ctrl-val  { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--c-rose); }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%; height: 5px;
+      border-radius: 4px;
+      background: var(--c-border);
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      background: var(--c-rose);
+      border: 2px solid #fff;
+      box-shadow: 0 2px 8px rgba(192,84,106,.4);
+      cursor: grab;
+    }
+
+    /* Chips de superfície */
+    .chip-row {
+      display: flex;
+      gap: .55rem;
+      margin-bottom: 1.1rem;
+      flex-wrap: wrap;
+    }
+    .chip {
+      padding: .45rem .9rem;
+      border: 1.5px solid var(--c-border);
+      border-radius: 20px;
+      background: var(--c-surface);
+      font-family: 'Inter', sans-serif;
+      font-size: .78rem;
+      cursor: pointer;
+      color: var(--c-muted);
+      transition: all var(--tr);
+    }
+    .chip.on {
+      border-color: var(--c-rose);
+      background: var(--c-rose-bg);
+      color: var(--c-rose);
+      font-weight: 600;
+    }
+
+    /* Relatório compacto */
+    .report-card {
+      background: var(--c-surface);
+      border: 1px solid var(--c-border);
+      border-radius: var(--r-md);
+      padding: 1rem 1.1rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 1rem;
+    }
+    .report-card .rc-title {
+      font-size: .68rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .1em;
+      color: var(--c-muted); margin-bottom: .7rem;
+    }
+    .report-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: .38rem 0;
+      border-bottom: 1px solid var(--c-border);
+      font-size: .82rem;
+    }
+    .report-row:last-child { border-bottom: none; }
+    .report-row span  { color: var(--c-muted); }
+    .report-row strong { font-weight: 600; color: var(--c-ink); }
+
+    /* Botões de ação finais */
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .65rem;
+      margin-bottom: 1rem;
+    }
+    .btn-act {
+      padding: .85rem;
+      border-radius: var(--r-md);
+      font-family: 'Inter', sans-serif;
+      font-size: .85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      text-align: center;
+      transition: opacity var(--tr), transform var(--tr);
+    }
+    .btn-act:hover  { opacity: .88; transform: translateY(-1px); }
+    .btn-act:active { transform: translateY(0); }
+    .btn-act.primary   { background: var(--c-rose);    color: #fff; }
+    .btn-act.secondary { background: var(--c-rose-bg); color: var(--c-rose); }
+
+    /* Assinatura no rodapé dos estágios 2/3 */
+    .author-bar {
+      text-align: center;
+      padding: .6rem;
+      font-size: .67rem;
+      color: var(--c-muted);
+      border-top: 1px solid var(--c-border);
+      background: var(--c-surface);
+      flex-shrink: 0;
+    }
+    .author-bar strong { color: var(--c-ink); }
+
+    /* ═══ LOADING OVERLAY ═══════════════════════════════════════ */
+    #loading {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(20,15,17,.88);
+      z-index: 999;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      color: #fff;
+    }
+    #loading.show { display: flex; }
+    .spinner {
+      width: 44px; height: 44px;
+      border: 3px solid rgba(255,255,255,.15);
+      border-top-color: var(--c-rose-lt);
+      border-radius: 50%;
+      animation: spin .75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading p {
+      font-size: .88rem;
+      color: rgba(255,255,255,.7);
+      font-weight: 300;
+    }
+
+    /* ═══ TOAST NOTIFICAÇÃO ═════════════════════════════════════ */
+    #toast {
+      position: fixed; bottom: 1.5rem; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--c-ink); color: #fff;
+      padding: .6rem 1.2rem; border-radius: 20px;
+      font-size: .82rem; white-space: nowrap;
+      z-index: 998;
+      transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+      pointer-events: none;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<!-- ═══ LOADING ═══ -->
+<div id="loading" role="status" aria-live="polite">
+  <div class="spinner"></div>
+  <p id="loading-txt">Analisando imagem…</p>
+</div>
+
+<!-- ═══ TOAST ═══ -->
+<div id="toast"></div>
+
+<!-- ════════════════════════════════════════════
+     ESTÁGIO 1 · CÂMERA
+════════════════════════════════════════════ -->
+<section id="s-camera" class="stage active" aria-label="Captura de imagem">
+
+  <video id="video" autoplay playsinline muted></video>
+  <!-- canvas oculto para capturar o frame -->
+  <canvas id="cap-canvas" style="display:none;"></canvas>
+
+  <!-- Topo -->
+  <div class="cam-top">
+    <div class="cam-brand">Shape<em>Sense</em></div>
+    <div class="cam-pill">
+      <span class="led blink"></span>
+      <span id="cam-status-txt">Iniciando câmera…</span>
+    </div>
+  </div>
+
+  <!-- Guia de enquadramento -->
+  <div class="frame-guide" aria-hidden="true">
+    <div class="fg-br"></div>
+    <div class="fg-bl"></div>
+  </div>
+  <div class="cam-hint">Câmera traseira · 50–60 cm do corpo</div>
+
+  <!-- Controles inferiores -->
+  <div class="cam-bottom">
+    <button class="btn-ghost-cam" onclick="history.back()">← Voltar</button>
+    <button class="btn-shutter" id="btn-shutter" onclick="capturePhoto()" aria-label="Fotografar">
+      <!-- ícone câmera -->
+      <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4" fill="rgba(255,255,255,.3)"/></svg>
+    </button>
+    <button class="btn-ghost-cam" onclick="showToast('Procure boa iluminação e evite sombras sobre o corpo.')">☀ Luz</button>
+  </div>
+
+</section>
+
+<!-- ════════════════════════════════════════════
+     ESTÁGIO 2 · MEDIÇÃO POR RA
+════════════════════════════════════════════ -->
+<section id="s-measure" class="stage" aria-label="Medição por Realidade Aumentada">
+
+  <div class="app-header">
+    <button class="btn-back-header" onclick="voltarParaCamera()">← Câmera</button>
+    <span class="brand-sm">Shape<em>Sense</em></span>
+    <span class="phase-tag">Estágio 2 · Medição</span>
+  </div>
+
+  <!-- Foto capturada + overlay de medição -->
+  <div class="photo-zone">
+    <canvas id="photo-canvas"></canvas>
+    <canvas id="overlay-canvas"></canvas>
+  </div>
+
+  <!-- Métricas e sugestão -->
+  <div class="metrics-panel">
+    <p class="section-label">Medidas detectadas automaticamente</p>
+
+    <div class="metric-grid">
+      <div class="metric-card">
+        <p class="mc-label">Largura da base mamária</p>
+        <p class="mc-value" id="m-base">—<span class="mc-unit"></span></p>
+      </div>
+      <div class="metric-card">
+        <p class="mc-label">Projeção natural do busto</p>
+        <p class="mc-value" id="m-proj">—<span class="mc-unit"></span></p>
+      </div>
+      <div class="metric-card">
+        <p class="mc-label">Distância intermamária</p>
+        <p class="mc-value" id="m-dist">—<span class="mc-unit"></span></p>
+      </div>
+      <div class="metric-card">
+        <p class="mc-label">Ptose estimada</p>
+        <p class="mc-value" id="m-ptose" style="font-size:1.1rem;"></p>
+      </div>
+    </div>
+
+    <!-- Algoritmo: base × projeção × fator = volume -->
+    <div class="suggest-box is-safe" id="suggest-box">
+      <p class="sb-label">Volume sugerido pelo algoritmo</p>
+      <p class="sb-volume" id="sb-vol">—</p>
+      <p class="sb-detail" id="sb-detail">Calculando…</p>
+    </div>
+
+    <button class="btn-primary" onclick="irParaSimulacao()">Ver Simulação 3D →</button>
+    <button class="btn-secondary" onclick="voltarParaCamera()">↩ Refazer foto</button>
+  </div>
+
+  <div class="author-bar">
+    <strong>Alanio Ferreira de Lima</strong> · Web 3.0 – Realidade Aumentada · Unidade 5
+  </div>
+
+</section>
+
+<!-- ════════════════════════════════════════════
+     ESTÁGIO 3 · SIMULAÇÃO INTERATIVA
+════════════════════════════════════════════ -->
+<section id="s-sim" class="stage" aria-label="Simulação interativa de prótese">
+
+  <div class="app-header">
+    <button class="btn-back-header" onclick="mostrarEstagio('s-measure')">← Medição</button>
+    <span class="brand-sm">Shape<em>Sense</em></span>
+    <span class="phase-tag">Estágio 3 · Simulação</span>
+  </div>
+
+  <!-- Canvas da simulação -->
+  <div class="sim-zone">
+    <canvas id="sim-canvas"></canvas>
+    <div class="safety-tag safe" id="safety-tag">✓ Dentro do padrão seguro</div>
+  </div>
+
+  <!-- Controles -->
+  <div class="sim-panel">
+    <p class="section-label">Controles de ajuste em tempo real</p>
+
+    <div class="ctrl-row">
+      <div class="ctrl-row-head">
+        <span class="ctrl-name">Volume da prótese</span>
+        <span class="ctrl-val" id="lbl-vol">250 ml</span>
+      </div>
+      <input type="range" id="r-vol" min="100" max="600" step="25" value="250"
+             oninput="atualizarSimulacao()" aria-label="Volume em ml">
+    </div>
+
+    <div class="ctrl-row">
+      <div class="ctrl-row-head">
+        <span class="ctrl-name">Perfil do implante</span>
+        <span class="ctrl-val" id="lbl-perf">Moderado</span>
+      </div>
+      <input type="range" id="r-perf" min="1" max="3" step="1" value="2"
+             oninput="atualizarSimulacao()" aria-label="Perfil">
+    </div>
+
+    <div class="ctrl-row">
+      <div class="ctrl-row-head">
+        <span class="ctrl-name">Largura da base</span>
+        <span class="ctrl-val" id="lbl-base">12 cm</span>
+      </div>
+      <input type="range" id="r-base" min="9" max="16" step="0.5" value="12"
+             oninput="atualizarSimulacao()" aria-label="Base em cm">
+    </div>
+
+    <!-- Chips de superfície -->
+    <p class="section-label" style="margin-top:.8rem;">Superfície</p>
+    <div class="chip-row" id="chip-row">
+      <button class="chip on" onclick="escolherSuperficie(this,'Lisa')">Lisa</button>
+      <button class="chip"    onclick="escolherSuperficie(this,'Texturizada')">Texturizada</button>
+      <button class="chip"    onclick="escolherSuperficie(this,'Poliuretano')">Poliuretano</button>
+    </div>
+
+    <!-- Relatório -->
+    <div class="report-card">
+      <p class="rc-title">Relatório ShapeSense</p>
+      <div class="report-row"><span>Volume</span>         <strong id="r-vol">250 ml</strong></div>
+      <div class="report-row"><span>Base da prótese</span><strong id="r-base-lbl">12 cm</strong></div>
+      <div class="report-row"><span>Perfil</span>         <strong id="r-perf-lbl">Moderado</strong></div>
+      <div class="report-row"><span>Superfície</span>     <strong id="r-surf-lbl">Lisa</strong></div>
+      <div class="report-row"><span>Base corporal medida</span><strong id="r-corp">—</strong></div>
+      <div class="report-row"><span>Processamento</span>  <strong>100 % local · sem nuvem</strong></div>
+      <div class="report-row"><span>Status</span>         <strong id="r-status" style="color:var(--c-safe)">Seguro</strong></div>
+    </div>
+
+    <!-- Ações -->
+    <div class="action-grid">
+      <button class="btn-act primary"   onclick="salvarPDF()">📄 Salvar PDF</button>
+      <button class="btn-act secondary" onclick="voltarParaCamera()">↩ Nova simulação</button>
+    </div>
+  </div>
+
+  <div class="author-bar">
+    <strong>Alanio Ferreira de Lima</strong> · Web 3.0 – Realidade Aumentada · Unidade 5
+  </div>
+
+</section>
+
+<!-- ════════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════════ -->
+<script>
+/*
+ * ShapeSense · simulacao.js (inline)
+ * Autor : Alanio Ferreira de Lima
+ * Curso : Web 3.0 – Realidade Aumentada · Unidade 5
+ *
+ * Fluxo:
+ *   startCamera()  → capturePhoto()
+ *   → analyzePhoto() → mostrarEstagio('s-measure')
+ *   → irParaSimulacao() → atualizarSimulacao() (loop por slider)
+ *   → salvarPDF()
+ */
+
+/* ── ESTADO DA APLICAÇÃO ─────────────────────────────────── */
+const app = {
+  photoCanvas : null,   // <canvas> com o frame capturado
+  metrics     : {},     // medidas calculadas
+  superficie  : 'Lisa'
+};
+
+/* ── UTILITÁRIOS ──────────────────────────────────────────── */
+
+/** Mostra um estágio e oculta os demais */
+function mostrarEstagio(id) {
+  document.querySelectorAll('.stage').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+/** Exibe e oculta o overlay de loading */
+function loading(show, txt = 'Aguarde…') {
+  const el = document.getElementById('loading');
+  document.getElementById('loading-txt').textContent = txt;
+  el.classList.toggle('show', show);
+}
+
+/** Toast de notificação rápida */
+let _toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+/* ── ESTÁGIO 1 · CÂMERA ───────────────────────────────────── */
+
+async function startCamera() {
+  const video = document.getElementById('video');
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode  : { ideal: 'environment' },
+        width       : { ideal: 1280 },
+        height      : { ideal: 960 }
+      },
+      audio: false
+    });
+    video.srcObject = stream;
+    document.getElementById('cam-status-txt').textContent = 'Câmera ativa';
+  } catch (err) {
+    document.getElementById('cam-status-txt').textContent = 'Sem acesso à câmera';
+    showToast('Permita o acesso à câmera nas configurações do navegador.');
+    console.error('[ShapeSense] Câmera:', err);
+  }
+}
+
+function capturePhoto() {
+  const video  = document.getElementById('video');
+  const canvas = document.getElementById('cap-canvas');
+
+  /* Define resolução real do vídeo */
+  canvas.width  = video.videoWidth  || 640;
+  canvas.height = video.videoHeight || 480;
+
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  app.photoCanvas = canvas;          // guarda referência
+
+  /* Para o stream para economizar bateria */
+  const stream = video.srcObject;
+  if (stream) stream.getTracks().forEach(t => t.stop());
+
+  /* Processa a imagem com loading falso realista */
+  loading(true, 'Detectando pontos de referência…');
+  setTimeout(() => {
+    loading(true, 'Calculando medidas mamárias…');
+    setTimeout(() => {
+      analyzePhoto();
+      loading(false);
+      mostrarEstagio('s-measure');
+    }, 900);
+  }, 1000);
+}
+
+/* ── ESTÁGIO 2 · ANÁLISE / MEDIÇÃO ───────────────────────── */
+
+/**
+ * analyzePhoto()
+ * Simula o pipeline de detecção que, em produção,
+ * usaria MediaPipe Pose ou TensorFlow.js para localizar
+ * landmarks do torso. Aqui usamos variação controlada
+ * para gerar métricas realistas e coerentes.
+ */
+function analyzePhoto() {
+  const base  = +(11.2 + Math.random() * 1.8).toFixed(1);   // 11.2 – 13.0 cm
+  const proj  = +(4.8  + Math.random() * 1.4).toFixed(1);   // 4.8  – 6.2 cm
+  const dist  = +(2.2  + Math.random() * 1.6).toFixed(1);   // 2.2  – 3.8 cm
+  const ptoseIdx = Math.floor(Math.random() * 3);
+  const ptose = ['Ausente (Grau 0)', 'Leve (Grau I)', 'Moderada (Grau II)'][ptoseIdx];
+
+  app.metrics = { base, proj, dist, ptose };
+
+  /* Renderiza foto no canvas de exibição */
+  const photoC   = document.getElementById('photo-canvas');
+  const overlayC = document.getElementById('overlay-canvas');
+  const src      = app.photoCanvas;
+
+  photoC.width  = src.width;
+  photoC.height = src.height;
+  photoC.getContext('2d').drawImage(src, 0, 0);
+
+  /* Aguarda o layout para pegar dimensões visuais corretas */
+  requestAnimationFrame(() => {
+    overlayC.width  = overlayC.offsetWidth;
+    overlayC.height = overlayC.offsetHeight;
+    desenharOverlayMedicao(overlayC, base, proj, dist);
+  });
+
+  /* Preenche UI */
+  setMetricaTexto('m-base',  base,  'cm');
+  setMetricaTexto('m-proj',  proj,  'cm');
+  setMetricaTexto('m-dist',  dist,  'cm');
+  document.getElementById('m-ptose').textContent = ptose;
+
+  /* Algoritmo de sugestão: base × proj × fator_corporal ≈ volume (ml) */
+  const volumeSug = Math.round((base * proj * 3.85) / 5) * 5;
+  const seguro    = volumeSug <= 350;
+
+  const box = document.getElementById('suggest-box');
+  box.className = 'suggest-box ' + (seguro ? 'is-safe' : 'is-warn');
+
+  document.getElementById('sb-vol').textContent    = `${volumeSug} ml`;
+  document.getElementById('sb-detail').textContent = seguro
+    ? `Perfil moderado · Base: ${base} cm · Dentro do padrão seguro (≤ 350 ml)`
+    : `⚠ ${volumeSug} ml excede 350 ml — risco cirúrgico aumentado. Consulte seu cirurgião.`;
+
+  /* Pré-configura sliders do Estágio 3 */
+  document.getElementById('r-vol').value  = Math.min(Math.max(volumeSug, 100), 600);
+  document.getElementById('r-base').value = base;
+  document.getElementById('r-corp').textContent = `${base} cm`;
+
+  atualizarSimulacao();
+}
+
+/** Ajusta texto de métrica com unidade em span menor */
+function setMetricaTexto(id, valor, unidade) {
+  document.getElementById(id).innerHTML =
+    `${valor}<span class="mc-unit">${unidade}</span>`;
+}
+
+/**
+ * desenharOverlayMedicao()
+ * Renderiza elipses translúcidas, linhas de referência
+ * e labels sobre o canvas de overlay do estágio 2.
+ */
+function desenharOverlayMedicao(canvas, base, proj, dist) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W / 2, cy = H * .50;
+
+  /* Proporções relativas ao canvas */
+  const rx   = W * .19;
+  const ry   = H * .26;
+  const gap  = W * .04;
+
+  /* Elipses semi-transparentes */
+  const cores = ['rgba(192,84,106,.30)', 'rgba(232,165,179,.20)'];
+  [cx - rx - gap / 2, cx + rx + gap / 2].forEach((x, i) => {
+    ctx.save();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle   = cores[0];
+    ctx.beginPath();
+    ctx.ellipse(x, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* Contorno tracejado */
+    ctx.strokeStyle = 'rgba(232,165,179,.8)';
+    ctx.lineWidth   = 1.5;
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath();
+    ctx.ellipse(x, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  });
+
+  ctx.setLineDash([]);
+
+  /* Linha de base horizontal */
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,.55)';
+  ctx.lineWidth   = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(cx - rx * 2 - gap / 2, cy);
+  ctx.lineTo(cx + rx * 2 + gap / 2, cy);
+  ctx.stroke();
+
+  /* Linha de distância intermamária */
+  ctx.strokeStyle = '#FFCF77';
+  ctx.lineWidth   = 1.5;
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(cx - gap / 2, cy);
+  ctx.lineTo(cx + gap / 2, cy);
+  ctx.stroke();
+  ctx.restore();
+
+  /* Pontos de referência RA */
+  const pontos = [
+    [cx - rx - gap / 2, cy - ry],  // topo esquerdo
+    [cx + rx + gap / 2, cy - ry],  // topo direito
+    [cx, cy]                        // centro intermamário
+  ];
+  pontos.forEach(([px, py]) => {
+    ctx.fillStyle = '#C0546A';
+    ctx.beginPath();
+    ctx.arc(px, py, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth   = 1.5;
+    ctx.stroke();
+  });
+
+  /* Labels de medição */
+  const fs = Math.max(10, W * .027);
+  ctx.font      = `600 ${fs}px Inter, sans-serif`;
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'center';
+  ctx.shadowColor  = 'rgba(0,0,0,.6)';
+  ctx.shadowBlur   = 4;
+  ctx.fillText(`base: ${base} cm`, cx - rx - gap / 2, cy - ry - 10);
+  ctx.fillText(`dist: ${dist} cm`, cx, cy + 22);
+  ctx.shadowBlur = 0;
+}
+
+/* ── ESTÁGIO 3 · SIMULAÇÃO ────────────────────────────────── */
+
+function irParaSimulacao() {
+  mostrarEstagio('s-sim');
+  atualizarSimulacao();
+}
+
+/**
+ * atualizarSimulacao()
+ * Chamada toda vez que um slider muda.
+ * Atualiza labels, relatório, badge de segurança e redesenha o canvas.
+ */
+function atualizarSimulacao() {
+  const vol  = +document.getElementById('r-vol').value;
+  const perf = +document.getElementById('r-perf').value;
+  const base = +document.getElementById('r-base').value;
+  const perfLabels = { 1: 'Baixo', 2: 'Moderado', 3: 'Alto' };
+  const pLabel = perfLabels[perf];
+
+  /* Labels ao lado dos sliders */
+  document.getElementById('lbl-vol').textContent  = `${vol} ml`;
+  document.getElementById('lbl-perf').textContent = pLabel;
+  document.getElementById('lbl-base').textContent = `${base} cm`;
+
+  /* Segurança: limite 350 ml */
+  const seguro = vol <= 350;
+  const badge  = document.getElementById('safety-tag');
+  badge.textContent = seguro
+    ? '✓ Dentro do padrão seguro'
+    : '⚠ Acima do limite — reduza o volume';
+  badge.className = 'safety-tag ' + (seguro ? 'safe' : 'warn');
+
+  /* Relatório */
+  document.getElementById('r-vol').textContent      = `${vol} ml`;
+  document.getElementById('r-base-lbl').textContent = `${base} cm`;
+  document.getElementById('r-perf-lbl').textContent = pLabel;
+  document.getElementById('r-surf-lbl').textContent = app.superficie;
+  const rStatus = document.getElementById('r-status');
+  rStatus.textContent  = seguro ? 'Seguro' : 'Atenção';
+  rStatus.style.color  = seguro ? 'var(--c-safe)' : 'var(--c-rose)';
+
+  redesenharSimulacao(vol, perf, base);
+}
+
+/**
+ * redesenharSimulacao()
+ * Renderiza a foto capturada + sobreposição das elipses
+ * representando os implantes com gradiente e volume proporcional.
+ */
+function redesenharSimulacao(vol, perf, base) {
+  const canvas = document.getElementById('sim-canvas');
+  const src    = app.photoCanvas;
+
+  if (src) {
+    canvas.width  = src.width;
+    canvas.height = src.height;
+    canvas.getContext('2d').drawImage(src, 0, 0);
+  } else {
+    /* Modo demo: fundo escuro sem foto */
+    canvas.width  = 480;
+    canvas.height = 360;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#1E1A1C';
+    ctx.fillRect(0, 0, 480, 360);
+  }
+
+  desenharImplante(canvas.getContext('2d'), canvas.width, canvas.height, vol, perf, base);
+}
+
+/**
+ * desenharImplante()
+ * Elipses com gradiente radial rosê simulando o volume do implante.
+ * Escala proporcional ao volume e base selecionados.
+ */
+function desenharImplante(ctx, W, H, vol, perf, base) {
+  const cx = W / 2, cy = H * .52;
+
+  /* Fator de escala baseado nos parâmetros */
+  const escalaVol  = .55 + (vol  / 600) * .65;
+  const escalaBase = base / 12;                // normalizado em 12 cm
+  const escalaPerf = .75 + (perf / 3)  * .50; // perfil baixo→alto
+
+  const rx   = W * .175 * escalaBase * escalaVol;
+  const ry   = H * .215 * escalaPerf * escalaVol;
+  const gap  = W * .038;
+
+  const centros = [cx - rx - gap / 2, cx + rx + gap / 2];
+
+  centros.forEach(x => {
+    /* Gradiente radial para efeito 3D */
+    const g = ctx.createRadialGradient(
+      x, cy - ry * .25, ry * .06,   // foco (destaque)
+      x, cy,            rx           // borda
+    );
+    g.addColorStop(0,   'rgba(244,175,190,.90)');
+    g.addColorStop(.55, 'rgba(192, 84,106,.60)');
+    g.addColorStop(1,   'rgba(140, 50, 80,.35)');
+
+    /* Sombra suave */
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,.35)';
+    ctx.shadowBlur  = 22;
+    ctx.shadowOffsetY = 8;
+
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(x, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    /* Contorno */
+    ctx.strokeStyle = 'rgba(232,165,179,.65)';
+    ctx.lineWidth   = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(x, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    /* Reflexo superior (highlight) */
+    const hl = ctx.createRadialGradient(x - rx * .2, cy - ry * .45, 2, x, cy - ry * .3, rx * .5);
+    hl.addColorStop(0,   'rgba(255,255,255,.28)');
+    hl.addColorStop(1,   'rgba(255,255,255,0)');
+    ctx.fillStyle = hl;
+    ctx.beginPath();
+    ctx.ellipse(x, cy - ry * .3, rx * .55, ry * .38, -.2, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  /* Label de volume em cada elipse */
+  const fs = Math.max(10, W * .022);
+  ctx.font      = `600 ${fs}px Inter, sans-serif`;
+  ctx.fillStyle = 'rgba(255,255,255,.92)';
+  ctx.textAlign = 'center';
+  ctx.shadowColor = 'rgba(0,0,0,.5)';
+  ctx.shadowBlur  = 3;
+  const metade = Math.round(vol / 2);
+  centros.forEach(x => ctx.fillText(`${metade} ml`, x, cy + fs * .4));
+  ctx.shadowBlur = 0;
+}
+
+/* ── SUPERFÍCIE ───────────────────────────────────────────── */
+function escolherSuperficie(btn, val) {
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+  btn.classList.add('on');
+  app.superficie = val;
+  document.getElementById('r-surf-lbl').textContent = val;
+  showToast(`Superfície: ${val}`);
+}
+
+/* ── NAVEGAÇÃO ────────────────────────────────────────────── */
+function voltarParaCamera() {
+  mostrarEstagio('s-camera');
+  startCamera();
+}
+
+/* ── PDF LOCAL ────────────────────────────────────────────── */
+
+/**
+ * salvarPDF()
+ * Abre uma janela nova com o relatório formatado
+ * e dispara o print nativo (sem envio a servidores).
+ */
+function salvarPDF() {
+  const vol  = document.getElementById('r-vol').value;
+  const base = document.getElementById('r-base').value;
+  const perf = document.getElementById('lbl-perf').textContent;
+  const surf = app.superficie;
+  const m    = app.metrics;
+  const seguro = +vol <= 350;
+  const data   = new Date().toLocaleDateString('pt-BR');
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR"><head>
+<meta charset="UTF-8">
+<title>ShapeSense · Relatório</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,500&family=Inter:wght@300;400;600&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;color:#1E1A1C;padding:40px;max-width:620px;margin:auto;line-height:1.6}
+  h1{font-family:'Playfair Display',serif;font-size:2.2rem;color:#1E1A1C;margin-bottom:4px}
+  h1 em{font-style:italic;color:#C0546A}
+  .sub{font-size:.82rem;color:#7A6D72;margin-bottom:1.4rem}
+  .badge{display:inline-block;padding:.3rem .9rem;border-radius:20px;font-size:.78rem;font-weight:600;
+         background:${seguro ? '#EAF5F2' : '#FDF0F3'};color:${seguro ? '#2E7D6B' : '#C0546A'};
+         border:1px solid ${seguro ? '#2E7D6B' : '#C0546A'};margin-bottom:1.2rem}
+  table{width:100%;border-collapse:collapse;margin-top:.4rem}
+  th{text-align:left;font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;
+     color:#7A6D72;padding:.5rem 0;border-bottom:2px solid #EDE5E8}
+  td{padding:.6rem 0;border-bottom:1px solid #EDE5E8;font-size:.88rem}
+  td:last-child{font-weight:600;text-align:right}
+  .disc{margin-top:1.6rem;padding:.9rem;background:#FDF0F3;border-left:3px solid #E8A5B3;
+        border-radius:6px;font-size:.75rem;color:#7A6D72;line-height:1.7}
+  .disc strong{color:#C0546A}
+  .footer{margin-top:1.4rem;font-size:.72rem;color:#7A6D72;text-align:center;
+          border-top:1px solid #EDE5E8;padding-top:.8rem}
+  @media print{body{padding:20px}}
+</style></head><body>
+<h1>Shape<em>Sense</em></h1>
+<p class="sub">Relatório de Simulação · ${data} · Gerado localmente no dispositivo</p>
+<div class="badge">${seguro ? '✓ Dentro do padrão seguro' : '⚠ Acima do limite — consulte seu cirurgião'}</div>
+<table>
+  <thead><tr><th>Parâmetro</th><th>Valor</th></tr></thead>
+  <tbody>
+    <tr><td>Volume sugerido</td>            <td>${vol} ml</td></tr>
+    <tr><td>Base da prótese</td>            <td>${base} cm</td></tr>
+    <tr><td>Perfil do implante</td>         <td>${perf}</td></tr>
+    <tr><td>Superfície</td>                 <td>${surf}</td></tr>
+    <tr><td>Largura base corporal (RA)</td> <td>${m.base || '—'} cm</td></tr>
+    <tr><td>Projeção natural (RA)</td>      <td>${m.proj || '—'} cm</td></tr>
+    <tr><td>Distância intermamária (RA)</td><td>${m.dist || '—'} cm</td></tr>
+    <tr><td>Ptose estimada (RA)</td>        <td>${m.ptose || '—'}</td></tr>
+    <tr><td>Processamento</td>              <td>100 % local · sem nuvem</td></tr>
+  </tbody>
+</table>
+<div class="disc">
+  <strong>Aviso médico:</strong> ShapeSense é uma ferramenta educacional de apoio à consulta cirúrgica.
+  Não substitui avaliação médica presencial. Nenhuma imagem ou dado pessoal foi transmitido a servidores.
+</div>
+<div class="footer">
+  <strong>Alanio Ferreira de Lima</strong> · Curso: Web 3.0 – Realidade Aumentada · Unidade 5 · CapacitaRA
+</div>
+</body></html>`;
+
+  const janela = window.open('', '_blank');
+  janela.document.write(html);
+  janela.document.close();
+  setTimeout(() => janela.print(), 400);
+}
+
+/* ── INICIALIZAÇÃO ────────────────────────────────────────── */
+startCamera();
+
+/* Desenha simulação demo sem foto ao carregar (para preview) */
+redesenharSimulacao(250, 2, 12);
+</script>
+
+</body>
+</html>

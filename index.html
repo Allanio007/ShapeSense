@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<!--
+  ╔══════════════════════════════════════════════════════════╗
+  ║              S H A P E S E N S E  ·  WebAR              ║
+  ║──────────────────────────────────────────────────────────║
+  ║  Autor  : Alanio Ferreira de Lima                        ║
+  ║  Curso  : Web 3.0 – Realidade Aumentada                  ║
+  ║  Unidade: 5 – Projeto Final                              ║
+  ║  Setor  : Saúde                                          ║
+  ║  Descrição: Simulação de prótese mamária via Canvas API  ║
+  ║             Processamento 100 % local · sem servidor     ║
+  ╚══════════════════════════════════════════════════════════╝
+-->
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="author" content="Alanio Ferreira de Lima" />
+  <meta name="description" content="ShapeSense – simulação WebAR de prótese mamária. Projeto Final – Web 3.0 Realidade Aumentada." />
+  <title>ShapeSense · WebAR</title>
+
+  <!-- Google Fonts: Playfair Display (serif elegante) + Inter (body limpo) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── TOKENS DE DESIGN ─────────────────────────────────────
+       Paleta: branco clínico + rosa médio + charcoal profundo
+       Tipografia: Playfair Display (display) / Inter (body)
+    ────────────────────────────────────────────────────────── */
+    :root {
+      --c-bg:       #FAFAFA;
+      --c-surface:  #FFFFFF;
+      --c-rose:     #C0546A;
+      --c-rose-lt:  #E8A5B3;
+      --c-rose-bg:  #FDF0F3;
+      --c-ink:      #1E1A1C;
+      --c-muted:    #7A6D72;
+      --c-safe:     #2E7D6B;
+      --c-safe-bg:  #EAF5F2;
+      --c-border:   #EDE5E8;
+      --radius-lg:  18px;
+      --radius-md:  12px;
+      --radius-sm:  8px;
+      --shadow-card: 0 2px 20px rgba(30,26,28,.07);
+      --transition: .22s cubic-bezier(.4,0,.2,1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--c-bg);
+      color: var(--c-ink);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ─────────────────────────────────────────────── */
+    .site-header {
+      padding: 1.6rem 1.4rem 0;
+      text-align: center;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: baseline;
+      gap: .12em;
+    }
+    .brand-shape {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2rem, 7vw, 3rem);
+      font-weight: 700;
+      color: var(--c-ink);
+      letter-spacing: -.5px;
+    }
+    .brand-sense {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2rem, 7vw, 3rem);
+      font-weight: 500;
+      font-style: italic;
+      color: var(--c-rose);
+      letter-spacing: -.5px;
+    }
+
+    .tagline {
+      margin-top: .5rem;
+      font-size: .85rem;
+      font-weight: 300;
+      color: var(--c-muted);
+      letter-spacing: .04em;
+    }
+
+    /* ── BADGE PRIVACIDADE ───────────────────────────────────── */
+    .privacy-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .45rem;
+      margin-top: 1rem;
+      padding: .35rem .95rem;
+      background: var(--c-safe-bg);
+      color: var(--c-safe);
+      border-radius: 20px;
+      font-size: .75rem;
+      font-weight: 600;
+      letter-spacing: .03em;
+    }
+    .privacy-badge svg { width: 13px; height: 13px; fill: var(--c-safe); }
+
+    /* ── HERO ILUSTRAÇÃO ─────────────────────────────────────── */
+    .hero-art {
+      margin: 1.8rem auto 0;
+      width: 180px;
+      height: 130px;
+      position: relative;
+    }
+    .hero-art svg { width: 100%; height: 100%; }
+
+    /* ── CARD PRINCIPAL ──────────────────────────────────────── */
+    .card {
+      background: var(--c-surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-card);
+      border: 1px solid var(--c-border);
+      margin: 1.4rem 1.2rem 0;
+      padding: 1.6rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── ETAPAS ──────────────────────────────────────────────── */
+    .steps-label {
+      font-size: .7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--c-muted);
+      margin-bottom: 1rem;
+    }
+
+    .step-list { list-style: none; }
+
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: .85rem 0;
+      border-bottom: 1px solid var(--c-border);
+    }
+    .step-item:last-child { border-bottom: none; }
+
+    .step-icon {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: var(--c-rose-bg);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .step-icon svg { width: 18px; height: 18px; stroke: var(--c-rose); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+    .step-text { flex: 1; }
+    .step-name {
+      font-size: .88rem;
+      font-weight: 600;
+      color: var(--c-ink);
+      margin-bottom: .2rem;
+    }
+    .step-desc {
+      font-size: .78rem;
+      font-weight: 300;
+      color: var(--c-muted);
+      line-height: 1.55;
+    }
+
+    /* ── BOTÃO CTA ───────────────────────────────────────────── */
+    .cta {
+      display: block;
+      width: 100%;
+      margin-top: 1.4rem;
+      padding: 1rem 1.4rem;
+      background: var(--c-rose);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      font-family: 'Inter', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: .02em;
+      cursor: pointer;
+      text-decoration: none;
+      text-align: center;
+      transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+      box-shadow: 0 4px 18px rgba(192,84,106,.30);
+    }
+    .cta:hover   { background: #a84560; box-shadow: 0 6px 22px rgba(192,84,106,.40); transform: translateY(-1px); }
+    .cta:active  { transform: translateY(0); }
+
+    /* ── AVISO MÉDICO ────────────────────────────────────────── */
+    .disclaimer {
+      margin-top: 1rem;
+      padding: .75rem 1rem;
+      background: var(--c-rose-bg);
+      border-left: 3px solid var(--c-rose-lt);
+      border-radius: var(--radius-sm);
+      font-size: .73rem;
+      color: var(--c-muted);
+      line-height: 1.6;
+    }
+    .disclaimer strong { color: var(--c-rose); }
+
+    /* ── FOOTER / ASSINATURA ─────────────────────────────────── */
+    .site-footer {
+      text-align: center;
+      padding: 1.2rem 1.4rem 1.8rem;
+      font-size: .72rem;
+      color: var(--c-muted);
+      line-height: 1.7;
+    }
+    .site-footer strong { color: var(--c-ink); font-weight: 600; }
+    .site-footer a { color: var(--c-rose); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+  <!-- ═══ HEADER ═══ -->
+  <header class="site-header">
+    <div class="brand">
+      <span class="brand-shape">Shape</span><span class="brand-sense">Sense</span>
+    </div>
+    <p class="tagline">Simulação de Prótese Mamária · Realidade Aumentada</p>
+
+    <div class="privacy-badge">
+      <!-- ícone cadeado -->
+      <svg viewBox="0 0 16 16"><path d="M11 7V5a3 3 0 0 0-6 0v2H4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-1Zm-5-2a2 2 0 0 1 4 0v2H6V5Z"/></svg>
+      Processamento 100 % local · sem nuvem · sem servidor
+    </div>
+
+    <!-- Ilustração SVG dos seios com overlay de RA -->
+    <div class="hero-art" aria-hidden="true">
+      <svg viewBox="0 0 180 130" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- fundo escuro simulando tela de câmera -->
+        <rect width="180" height="130" rx="14" fill="#1E1A1C"/>
+        <!-- elipses esquerdas -->
+        <ellipse cx="68" cy="68" rx="38" ry="44" fill="#C0546A" fill-opacity=".35"/>
+        <ellipse cx="112" cy="68" rx="38" ry="44" fill="#C0546A" fill-opacity=".35"/>
+        <!-- contornos -->
+        <ellipse cx="68" cy="68" rx="38" ry="44" stroke="#E8A5B3" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <ellipse cx="112" cy="68" rx="38" ry="44" stroke="#E8A5B3" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <!-- linha de base -->
+        <line x1="30" y1="68" x2="150" y2="68" stroke="#fff" stroke-width="1" stroke-dasharray="3 3" stroke-opacity=".4"/>
+        <!-- pontos de referência RA -->
+        <circle cx="68" cy="30" r="4" fill="#C0546A"/>
+        <circle cx="112" cy="30" r="4" fill="#C0546A"/>
+        <circle cx="90" cy="68" r="4" fill="#E8A5B3"/>
+        <!-- label volume -->
+        <text x="56" y="73" font-family="Inter,sans-serif" font-size="9" fill="white" opacity=".85">275ml</text>
+        <text x="100" y="73" font-family="Inter,sans-serif" font-size="9" fill="white" opacity=".85">275ml</text>
+        <!-- badge seguro -->
+        <rect x="35" y="110" width="110" height="14" rx="7" fill="#2E7D6B" fill-opacity=".85"/>
+        <text x="90" y="120.5" font-family="Inter,sans-serif" font-size="8" fill="white" text-anchor="middle">✓ seguro · 550 ml total</text>
+      </svg>
+    </div>
+  </header>
+
+  <!-- ═══ CARD ═══ -->
+  <main>
+    <div class="card">
+      <p class="steps-label">Como funciona</p>
+
+      <ul class="step-list">
+        <!-- Estágio 1 -->
+        <li class="step-item">
+          <div class="step-icon">
+            <!-- ícone câmera -->
+            <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </div>
+          <div class="step-text">
+            <p class="step-name">1 · Captura da imagem</p>
+            <p class="step-desc">Câmera traseira · posicione a 50–60 cm · enquadre a região do busto</p>
+          </div>
+        </li>
+        <!-- Estágio 2 -->
+        <li class="step-item">
+          <div class="step-icon">
+            <!-- ícone régua -->
+            <svg viewBox="0 0 24 24"><path d="M2 12h20M2 12l4-4M2 12l4 4M22 12l-4-4M22 12l-4 4"/><line x1="8" y1="9" x2="8" y2="15"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="16" y1="9" x2="16" y2="15"/></svg>
+          </div>
+          <div class="step-text">
+            <p class="step-name">2 · Medição por RA</p>
+            <p class="step-desc">Canvas API detecta base, projeção, distância intermamária e ptose</p>
+          </div>
+        </li>
+        <!-- Estágio 3 -->
+        <li class="step-item">
+          <div class="step-icon">
+            <!-- ícone ajuste -->
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+          </div>
+          <div class="step-text">
+            <p class="step-name">3 · Simulação interativa</p>
+            <p class="step-desc">Ajuste volume, perfil, base e superfície em tempo real · exporte o relatório</p>
+          </div>
+        </li>
+      </ul>
+
+      <a href="simulacao.html" class="cta">Iniciar Simulação →</a>
+
+      <div class="disclaimer">
+        <strong>Aviso médico:</strong> ShapeSense é uma ferramenta educacional de apoio à consulta.
+        Não substitui avaliação clínica. Nenhuma imagem ou dado pessoal é transmitido a servidores.
+      </div>
+    </div>
+  </main>
+
+  <!-- ═══ FOOTER / ASSINATURA ═══ -->
+  <footer class="site-footer">
+    <strong>Alanio Ferreira de Lima</strong><br>
+    Curso: Web 3.0 – Realidade Aumentada<br>
+    Projeto Final · Unidade 5 · CapacitaRA<br>
+    <a href="https://github.com/adrianocefet/RalidadeAumentada" target="_blank" rel="noopener">GitHub do Curso</a>
+  </footer>
+
+</body>
+</html>

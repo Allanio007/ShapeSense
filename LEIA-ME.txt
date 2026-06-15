@@ -1,0 +1,80 @@
+╔══════════════════════════════════════════════════════════════╗
+║                 S H A P E S E N S E  ·  WebAR               ║
+║  Simulação de Prótese Mamária por Realidade Aumentada        ║
+╚══════════════════════════════════════════════════════════════╝
+
+  Autor   : Alanio Ferreira de Lima
+  Curso   : Web 3.0 – Realidade Aumentada
+  Unidade : 5 – Projeto Final do Curso
+  Setor   : Saúde
+  Ano     : 2025
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+DESCRIÇÃO DO PROJETO
+──────────────────────────────────────────────────────────────
+ShapeSense é uma aplicação WebAR de apoio à consulta cirúrgica
+que permite a simulação visual de próteses mamárias diretamente
+no navegador do smartphone, em 3 estágios:
+
+  Estágio 1 · Captura   — câmera traseira com guia de enquadramento
+  Estágio 2 · Medição   — overlay RA via Canvas API detecta base,
+                           projeção, distância intermamária e ptose
+  Estágio 3 · Simulação — ajuste de volume, perfil, base e
+                           superfície em tempo real + relatório PDF
+
+TECNOLOGIAS UTILIZADAS
+──────────────────────────────────────────────────────────────
+  · HTML5 semântico
+  · CSS3 (Custom Properties, Grid, Flexbox, animações)
+  · JavaScript ES6+ (sem frameworks)
+  · Canvas 2D API  — renderização RA e simulação de implantes
+  · MediaDevices.getUserMedia — câmera traseira do dispositivo
+  · window.print() — exportação de PDF local (sem servidor)
+
+PRIVACIDADE
+──────────────────────────────────────────────────────────────
+  Processamento 100% local.
+  Nenhuma imagem ou dado é transmitido a servidores.
+  Nenhum cookie ou armazenamento persistente é utilizado.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CRÉDITOS E REFERÊNCIAS
+──────────────────────────────────────────────────────────────
+
+Este projeto não utiliza modelos 3D externos (.glb / .gltf).
+A simulação é renderizada integralmente via Canvas 2D API
+com algoritmo próprio de elipses com gradiente radial.
+
+Tipografia:
+  · Playfair Display — https://fonts.google.com/specimen/Playfair+Display
+  · Inter            — https://fonts.google.com/specimen/Inter
+  · Licença: SIL Open Font License (OFL) — uso livre
+
+Referências técnicas:
+  · MDN Canvas API    — https://developer.mozilla.org/pt-BR/docs/Web/API/Canvas_API
+  · MDN getUserMedia  — https://developer.mozilla.org/pt-BR/docs/Web/API/MediaDevices/getUserMedia
+
+Curso de referência:
+  · CapacitaRA — Imersão em Realidade Aumentada
+    Coordenação: Softex / MCTI Futuro
+    Executores  : iRede · Eldorado · Vertex
+    GitHub      : https://github.com/adrianocefet/RalidadeAumentada
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ENTREGA
+──────────────────────────────────────────────────────────────
+  Link Netlify : https://remarkable-yeot-183a95.netlify.app
+  Arquivo ZIP  : Alanio_Ferreira_de_Lima_ShapeSense.zip
+
+AVISO MÉDICO
+──────────────────────────────────────────────────────────────
+  ShapeSense NÃO substitui consulta médica.
+  Desenvolvido exclusivamente para fins educacionais no contexto
+  do Curso Web 3.0 – Realidade Aumentada · CapacitaRA.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Alanio Ferreira de Lima · Web 3.0 – Realidade Aumentada · 2025
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
