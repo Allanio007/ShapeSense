@@ -6,6 +6,8 @@ test('buildShape returns circle by default', () => {
   const circle = buildShape('circle', 50, 40, 20);
 
   assert.equal(circle.type, 'circle');
+  assert.equal(circle.centerX, 50);
+  assert.equal(circle.centerY, 40);
   assert.equal(circle.radius, 10);
 });
 

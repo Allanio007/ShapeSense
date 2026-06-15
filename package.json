@@ -2,7 +2,6 @@
   "name": "shapesense",
   "version": "1.0.0",
   "description": "Aplicativo para Simulação de Realidade Aumentada de ShapeSense",
-  "main": "app.js",
   "scripts": {
     "test": "node --test"
   },
