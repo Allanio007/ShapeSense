@@ -10,8 +10,13 @@ const startButton = document.getElementById('start');
 const context = canvas.getContext('2d');
 
 function drawOverlay() {
-  const width = video.videoWidth || canvas.clientWidth;
-  const height = video.videoHeight || canvas.clientHeight;
+  const width = video.videoWidth;
+  const height = video.videoHeight;
+
+  if (!width || !height) {
+    requestAnimationFrame(drawOverlay);
+    return;
+  }
 
   if (canvas.width !== width || canvas.height !== height) {
     canvas.width = width;
