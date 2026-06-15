@@ -1,0 +1,21 @@
+{
+  "name": "shapesense",
+  "version": "1.0.0",
+  "description": "Aplicativo para Simulação de Realidade Aumentada de ShapeSense",
+  "main": "app.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Allanio007/ShapeSense.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/Allanio007/ShapeSense/issues"
+  },
+  "homepage": "https://github.com/Allanio007/ShapeSense#readme"
+}

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShapeSense AR Simulator</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app">
+    <h1>ShapeSense AR Simulator</h1>
+    <p>Simulação simples de realidade aumentada com formas geométricas sobre a câmera.</p>
+
+    <section class="controls">
+      <label for="shape">Forma</label>
+      <select id="shape">
+        <option value="circle">Círculo</option>
+        <option value="square">Quadrado</option>
+        <option value="triangle">Triângulo</option>
+      </select>
+
+      <label for="color">Cor</label>
+      <input id="color" type="color" value="#00ffcc">
+
+      <label for="size">Tamanho</label>
+      <input id="size" type="range" min="20" max="200" value="80">
+
+      <button id="start">Iniciar câmera</button>
+    </section>
+
+    <section class="stage">
+      <video id="camera" autoplay playsinline muted></video>
+      <canvas id="overlay"></canvas>
+    </section>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
